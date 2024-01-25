@@ -20,11 +20,12 @@ def thread_function(name):
 
 
 def callThreads():
-    a = []
+    book = []
     with ThreadPoolExecutor(max_workers=get_available_threads) as executor:
-        for x in a:
+        for chunk in book:
             if stop_threads:
                 break  # Exit the loop if the stop flag is set
 
-            executor.submit(thread_function, a)
+            executor.submit(thread_function, chunk)
             count += 1
+
