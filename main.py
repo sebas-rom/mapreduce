@@ -13,3 +13,18 @@ def get_available_threads():
     num_threads = multiprocessing.cpu_count()
 
     return num_threads
+
+def thread_function(name):
+    while not stop_threads:
+        print(f"Thread {name} is running")
+
+
+def callThreads():
+    a = []
+    with ThreadPoolExecutor(max_workers=get_available_threads) as executor:
+        for x in a:
+            if stop_threads:
+                break  # Exit the loop if the stop flag is set
+
+            executor.submit(thread_function, a)
+            count += 1
