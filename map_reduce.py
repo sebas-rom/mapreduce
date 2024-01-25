@@ -58,3 +58,6 @@ if __name__ == "__main__":
     output_file = 'result.txt'
 
     map_reduce(input_directory, output_file)
+
+    #Test
+    
