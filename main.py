@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 import multiprocessing  # Import the multiprocessing module
 
-from file_splitter import split_file
+from file_splitter import split_and_lowercase
 
 # Global variable to signal the threads to stop
 stop_threads = False
@@ -32,8 +32,8 @@ def callThreads():
             count += 1
 
 if __name__ == "__main__":
-    input_file_path = 'path/to/your/input/file.txt'  # Replace with the actual path to your input file
+    input_file_path = 'texts/test.txt'  # Replace with the actual path to your input file
     output_directory = 'chunks'
-    max_chunk_size = 32 * 1024 * 1024  # 32MB
+    max_chunk_size = 30 * 1024 *1024  # 31.5MB
 
-    split_file(input_file_path, output_directory, max_chunk_size)
+    split_and_lowercase(input_file_path, output_directory, max_chunk_size)
