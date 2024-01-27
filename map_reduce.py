@@ -10,12 +10,8 @@ def read_chunk(file_path):
         return file.read()
 
 def map_function(chunk):
-    word_count = []
     words = re.findall(r'\b\w+\b', chunk)
-    
-    for word in words:
-        word_count.append((word, 1))
-    
+    word_count = [(word, True) for word in words]
     return word_count
 
 def shuffle_and_sort(mapped_results):
@@ -27,12 +23,7 @@ def shuffle_and_sort(mapped_results):
     return sorted_results.items()
 
 def reduce_function(sorted_results):
-    reduced_results = []
-    
-    for word, counts in sorted_results:
-        total_count = sum(counts)
-        reduced_results.append((word, total_count))
-    
+    reduced_results = [(word, sum(counts)) for word, counts in sorted_results]
     return reduced_results
 
 def save_to_file(data, file_name , output_dir = 'logs'):
