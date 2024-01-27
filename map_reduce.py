@@ -77,14 +77,6 @@ def map_reduce(input_dir="chunks"):
         reduced_results = reduce_function(loaded_group)
         save_to_file(reduced_results, filename.replace('.txt', '') + '_reduce','reduceStep')
         
-    # reduced_results = reduce_function(sorted_results)
-    # if verbose:
-    #     logging.info(f'Reduce result for {filename} completed')
-    # with open(output_file, 'w') as result_file:
-    #     for word, count in reduced_results:
-    #         result_file.write(f'("{word}",{count})\n')
-
-    # logging.info('Map-Reduce process completed successfully.')
 
 if __name__ == "__main__":
     
