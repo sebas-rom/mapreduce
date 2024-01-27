@@ -3,7 +3,7 @@ from collections import defaultdict
 import os
 import re
 
-logging.basicConfig(filename='map_reduce_log.txt', level=logging.INFO)
+
 
 def read_chunk(file_path):
     with open(file_path, 'r') as file:
@@ -11,7 +11,7 @@ def read_chunk(file_path):
 
 def map_function(chunk):
     word_count = []
-    words = re.findall(r'\b\w+\b', chunk.lower())
+    words = re.findall(r'\b\w+\b', chunk)
     
     for word in words:
         word_count.append((word, 1))
@@ -35,44 +35,47 @@ def reduce_function(sorted_results):
     
     return reduced_results
 
-def log_to_file(data, file_name):
-    with open(file_name, 'w') as log_file:
+def save_to_file(data, file_name , output_dir = 'logs'):
+    os.makedirs(output_dir, exist_ok=True)
+    log_filename = os.path.join(output_dir, f'{file_name}')
+    with open(log_filename, 'w') as log_file:
         for item in data:
             log_file.write(f'{item}\n')
 
-def map_reduce(input_dir, output_file, verbose=False):
-    mapped_results = []
+def map_reduce(input_dir, output_file = "result.txt", verbose=False):
+    if verbose:
+        os.makedirs("logs", exist_ok=True)
+        logging.basicConfig(filename='logs/map_reduce_log.txt', level=logging.INFO)
+    mapped_results_group = []
 
     for filename in os.listdir(input_dir):
         if filename.endswith(".txt"):
             file_path = os.path.join(input_dir, filename)
             chunk = read_chunk(file_path)
             mapped_result = map_function(chunk)
-            mapped_results.extend(mapped_result)
-
-            if verbose:
-                log_to_file(mapped_result, 'map.txt')
-                logging.info(f'Map result for {filename}: {mapped_result}')
-
-    if verbose:
-        log_to_file(mapped_results, 'shuffle_sort.txt')
-
-    sorted_results = shuffle_and_sort(mapped_results)
-
-    if verbose:
-        log_to_file(sorted_results, 'shuffle_sort.txt')
-
-    reduced_results = reduce_function(sorted_results)
-
-    with open(output_file, 'w') as result_file:
-        for word, count in reduced_results:
-            result_file.write(f'("{word}",{count})\n')
+            
+        mapped_results_group.extend(mapped_result)
+        save_to_file(mapped_result,filename.replace('.txt', '') + '_map.txt','mapStep')  #Save map result to chunk_x_map.txt
+        if verbose:
+             logging.info(f'Map result for {filename} completed')
+            
+        # Reduce
+            # Shuffle and sort 
+        sorted_results = shuffle_and_sort(mapped_result)
+        save_to_file(sorted_results, filename.replace('.txt', '') + '_group.txt','groupStep')
+        if verbose:
+            logging.info(f'ShufleSort result for {filename} completed')
+                
+        reduced_results = reduce_function(sorted_results)
+        if verbose:
+            logging.info(f'Reduce result for {filename} completed')
+        with open(output_file, 'w') as result_file:
+            for word, count in reduced_results:
+                result_file.write(f'("{word}",{count})\n')
 
     logging.info('Map-Reduce process completed successfully.')
 
 if __name__ == "__main__":
     input_directory = 'chunks'
-    output_file = 'result.txt'
-
-    # Set verbose to True to enable logging intermediate results
-    map_reduce(input_directory, output_file, verbose=True)
+    
+    map_reduce(input_directory, verbose=True)
