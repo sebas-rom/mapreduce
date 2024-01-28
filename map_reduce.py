@@ -3,8 +3,8 @@ import os
 import re
 import json
 
-def read_chunk(file_path, encoding='utf-8'):
-    with open(file_path, 'r', encoding=encoding, errors='replace') as file:
+def read_chunk(file_path):
+    with open(file_path, 'r') as file:
         return file.read()
 
 def map_function(chunk):
@@ -15,8 +15,7 @@ def map_function(chunk):
 def shuffle_and_sort(mapped_results):
     sorted_results = defaultdict(list)
     
-    for item in mapped_results:
-        word, count = item
+    for word, count in mapped_results:
         sorted_results[word].append(count)
     
     return sorted_results.items()
