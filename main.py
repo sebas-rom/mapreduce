@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor,wait
+from concurrent.futures import ThreadPoolExecutor,wait,ProcessPoolExecutor
 import os
 import threading
 import concurrent.futures
@@ -152,48 +152,11 @@ if __name__ == "__main__":
     max_chunk_size = 30 * 1024 *512  # 31.5MB 
     
     #split_and_lowercase(input_file_path, output_directory, max_chunk_size)
-
-    total_chunks = len([filename for filename in os.listdir(output_directory) if filename.endswith(".txt")])
-
-    controller = Controller(total_chunks)
-    controller.initialize_chunks(output_directory)
-
-    threads = []
-
-    # Create two separate thread pools for mapNodes
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        future1 = executor.submit(run_map_group_pair, 1, controller, controller.half_chunks)
-        future2 = executor.submit(run_map_group_pair, 2, controller, controller.half_chunks)
-
-    concurrent.futures.wait([future1, future2])
-
-    print("Exiting Main Thread")
-
-
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-    #     for filename in os.listdir("chunks"):
-    #         if filename.endswith(".txt"):
-    #             node = mapNode(1, f"mapNode-{filename}", 4, filename)
-    #             future = executor.submit(node.run)
-    #             threads.append(future)
-
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-    #     for filename in os.listdir("mapStep"):           
-    #         node = groupNode(1, f"groupNode-{filename}", 4, filename)
-    #         future = executor.submit(node.run)
-    #         threads.append(future)
-
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-    #     filenames = sorted(os.listdir("groupStep"))
-    #     pairs = [(filenames[i], filenames[i + 1]) for i in range(0, len(filenames), 2)]
-    #     for file_pair in pairs:           
-    #         node = reduceNode(1, f"reduceNode-{file_pair[0]}-{file_pair[1]}", 2, file_pair)
-    #         future = executor.submit(node.run)
-    #         threads.append(future)
     
+    
+    # Example usage
+    chunks_directory = "chunks"
+    num_threads = 4
 
-
-    # Wait for all threads to complete
-    # concurrent.futures.wait(threads)
-
-    print("Exiting Map Thread") 
+    result = process_files_in_parallel(chunks_directory, num_threads)
+    print(result)
