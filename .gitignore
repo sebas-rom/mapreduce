@@ -9,4 +9,5 @@ map_reduce_log.txt
 map.txt
 shuffle_sort.txt
 result.txt
+/__pycache__
 ```
