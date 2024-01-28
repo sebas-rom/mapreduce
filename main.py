@@ -149,8 +149,8 @@ if __name__ == "__main__":
 
     input_file_path = 'texts/test.txt' 
     output_directory = 'chunks'
-    max_chunk_size = 10 * 1024 * 1024  # 31.5MB
-
+    max_chunk_size = 30 * 1024 *512  # 31.5MB 
+    
     #split_and_lowercase(input_file_path, output_directory, max_chunk_size)
 
     total_chunks = len([filename for filename in os.listdir(output_directory) if filename.endswith(".txt")])
