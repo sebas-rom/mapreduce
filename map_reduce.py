@@ -61,6 +61,7 @@ def map_reduce(input_dir="chunks"):
     sorted_results = shuffle_and_sort(temp_group)
     save_to_file(sorted_results, filename.replace('.txt', '') + '_group','groupStep')
 
+    #Reduce
     for filename in os.listdir('groupStep'):    
         file_path = os.path.join('groupStep', filename)
         loaded_group = read_result_from_file(file_path)
