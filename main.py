@@ -48,6 +48,8 @@ class mapNode (threading.Thread):
 		self.input_dir = input_dir
 	def run(self):
 		print ("Starting " + self.name)
+		threadLock.acquire()
+
 		for filename in os.listdir(self.input_dir):
             if filename.endswith(".txt"):
                 file_path = os.path.join(self.input_dir, filename)
