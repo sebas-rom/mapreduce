@@ -51,7 +51,8 @@ def map_task(file_path):
     chunk = read_chunk(file_path)
     mapped_result = map_function(chunk)
     filename = os.path.basename(file_path)  
-    save_to_file(mapped_result,filename.replace('.txt', '') + '_map','mapStep')  #Save map result to chunk_x_map.txt
+    save_to_file(mapped_result,filename.replace('.txt', '') + '_map.txt','mapStep')  #Save map result to chunk_x_map.txt
+    return filename.replace('.txt', '') + '_map.txt'
     
 def group_task(dir_path):
     
