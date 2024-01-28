@@ -53,6 +53,7 @@ def process_files_in_parallel(input_dir, num_threads):
         futures = []
         for i in range(0, len(files), files_per_thread):
             future = executor.submit(process_file_range, i, i + files_per_thread)
+            #
             futures.append(future)
 
         # Wait for all threads to complete
@@ -74,7 +75,7 @@ def process_files_in_parallel(input_dir, num_threads):
 if __name__ == "__main__":
     input_file_path = 'texts/test.txt'  # Replace with the actual path to your input file
     output_directory = 'chunks'
-    max_chunk_size = 30 * 1024 *512  # 31.5MB 
+    max_chunk_size = 30 * 1024 *256  # 31.5MB 
     
     #split_and_lowercase(input_file_path, output_directory, max_chunk_size)
     
