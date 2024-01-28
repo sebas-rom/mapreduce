@@ -25,14 +25,6 @@ def shuffle_and_sort(mapped_results):
     
     return sorted_results.items()
 
-def reduce_function(sorted_results):
-    reduced_results = []
-    
-    for word, counts in sorted_results:
-        total_count = sum(counts)
-        reduced_results.append((word, total_count))
-    
-    return reduced_results
 
 def save_to_file(result, file_path, output_dir='logs'):
     log_filename = os.path.join(output_dir, f'{file_path}')
@@ -65,6 +57,17 @@ def group_task(dir_path):
         
     sorted_results = shuffle_and_sort(temp_group)
     save_to_file(sorted_results, filename.replace('.txt', '') + '_group','groupStep')   
+  
+  
+def reduce_function(sorted_results):
+    reduced_results = []
+    
+    for word, counts in sorted_results:
+        total_count = sum(counts)
+        reduced_results.append((word, total_count))
+    
+    return reduced_results
+
         
 def reduce_task(dir_path):
     for filename in os.listdir(dir_path):    
