@@ -9,7 +9,7 @@ def read_chunk(file_path):
 
 def map_function(chunk):
     words = re.findall(r'\b\w+\b', chunk)
-    word_count = [(word, True) for word in words]
+    word_count = [(word, 1) for word in words]
     return word_count
 
 def shuffle_and_sort(mapped_results):
