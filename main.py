@@ -54,6 +54,7 @@ class mapNode(threading.Thread):
                 print(f"{self.name} processing chunk_{chunk_id}")
                 try:
                     self.map_chunk(chunk_id)
+                    print(f"{self.name} exiting chunk_{chunk_id}")
                     self.controller.mark_chunk_completed(chunk_id)
                 except Exception as e:
                     print(f"{self.name} failed processing chunk_{chunk_id}: {str(e)}")
@@ -124,7 +125,7 @@ if __name__ == "__main__":
 
      # Create two thread pools for mapNodes
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        for i in range(1, 3):
+        for i in range(1, 5):
             for j in range(1, 3):
                 node = mapNode(j, f"mapNode-{i}-{j}", controller)
                 future = executor.submit(node.run)
