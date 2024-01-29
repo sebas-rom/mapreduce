@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor,wait,ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 import os
 import threading
 import concurrent.futures
@@ -149,14 +149,15 @@ if __name__ == "__main__":
 
     input_file_path = 'texts/test.txt' 
     output_directory = 'chunks'
-    max_chunk_size = 30 * 1024 *512  # 31.5MB 
+    max_chunk_size = 30 * 1024 *256  # 31.5MB 
     
-    #split_and_lowercase(input_file_path, output_directory, max_chunk_size)
+    split_and_lowercase(input_file_path, output_directory, max_chunk_size)
     
     
     # Example usage
     chunks_directory = "chunks"
     num_threads = 4
 
-    result = process_files_in_parallel(chunks_directory, num_threads)
+    result = process_files_in_parallel_process(chunks_directory, num_threads)
+    
     print(result)
