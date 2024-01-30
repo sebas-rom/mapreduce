@@ -156,7 +156,7 @@ def directory_utils(executor_id):
     os.makedirs(f"groupStep{executor_id}")
     os.makedirs(f"reduceStep{executor_id}")
 
-def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
+def run_map_reduce_task(executor_id, controller, max_chunks_per_executor):
     directory_utils(executor_id)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as map_executor, \
             concurrent.futures.ThreadPoolExecutor(max_workers=1) as group_executor, \
@@ -184,7 +184,7 @@ def runComputers(computer_number):
     controller = Controller(total_chunks)
     controller.initialize_chunks('chunks')
     with concurrent.futures.ThreadPoolExecutor(max_workers=computer_number) as executor:
-        futures = [executor.submit(run_map_group_pair, i, controller, controller.half_chunks) for i in range(1, computer_number + 1)]
+        futures = [executor.submit(run_map_reduce_task, i, controller, controller.half_chunks) for i in range(1, computer_number + 1)]
     
     wait(futures)
     print("Exiting Main Thread")
