@@ -93,8 +93,15 @@ class mapNode(threading.Thread):
     def map_chunk(self, chunk_id):
         file_path = os.path.join("chunks", f"chunk_{chunk_id}.txt")
         chunk = read_chunk(file_path)
+
+        # Introduce a counter to cause an exception after processing a certain number of chunks
+        self.processed_chunks += 1
+        if self.processed_chunks == 2:  # Change 3 to the desired number of processed chunks
+            raise Exception(f"Intentional exception in {self.name} for chunk_{chunk_id}")
+
         mapped_result = map_function(chunk)
         save_to_file(mapped_result, f"chunk_{chunk_id}_map", f"mapStep{self.executor_id}")
+
 
 
 class groupNode(threading.Thread):
@@ -193,7 +200,7 @@ if __name__ == "__main__":
 
     input_file_path = "texts/test.txt"
 
-    split_and_lowercase(input_file_path, 'chunks', 10 * 1024 * 1024)
+    #split_and_lowercase(input_file_path,'chunks', 10 * 1024 * 1024)
 
     runComputers(2)
 

@@ -12,4 +12,5 @@ map.txt
 shuffle_sort.txt
 result.txt
 /__pycache__
+/texts/bible.txt
 ```
