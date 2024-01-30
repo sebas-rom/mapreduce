@@ -5,6 +5,7 @@ import concurrent.futures
 from file_splitter import split_and_lowercase
 from map_reduce import read_chunk,map_function,save_to_file,read_result_from_file,shuffle_and_sort,reduce_function
 exitFlag = 0
+import multiprocessing
 # Global variable to signal the threads to stop
 stop_threads = False
 
@@ -101,32 +102,34 @@ class groupNode(threading.Thread):
             print("Starting " + self.name)
             sorted_results_all = []
             for filename in os.listdir(self.input_dir):
+                print(f"{self.name} processing {filename}")
                 sorted_results_all.extend(self.group_f(filename))
             save_to_file(sorted_results_all, f"groupStep{self.executor_id}", f'groupStep{self.executor_id}')
             print("Exiting " + self.name)
-
+            print(f"Group Executor {self.executor_id} finished.")
+            break
+    
     def group_f(self,input_file):
-        file_path = os.path.join('mapStep'+self.executor_id, input_file)
+        print(f"Grouping {input_file}")
+        #print the actual path
+        file_path = (os.path.join(self.input_dir, input_file))
+        #print(file_path)
         loaded_map = read_result_from_file(file_path)
+        #print(loaded_map)
         return loaded_map
         
 
 def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as map_executor, concurrent.futures.ThreadPoolExecutor(max_workers=1) as group_executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as map_executor, \
+            concurrent.futures.ThreadPoolExecutor(max_workers=1) as group_executor:
         map_threads = []
         for i in range(1, max_chunks_per_executor):
             node = mapNode(1, f"mapNode-{i}-{executor_id}", controller, executor_id, max_chunks_per_executor)
             future = map_executor.submit(node.run)
             map_threads.append(future)
-
         concurrent.futures.wait(map_threads)
         print(f"Map Executor {executor_id} finished. Starting groupNode.")
         
-
-        group_node = groupNode(1, f"groupNode-{executor_id}", controller, 'mapStep'+executor_id, executor_id)
-        future_group = group_executor.submit(group_node.run)
-        concurrent.futures.wait([future_group])
-        print(f"Group Executor {executor_id} finished.")
 
 class reduceNode(threading.Thread):
     def __init__(self, threadID, name, counter, file_pair): 
@@ -174,14 +177,23 @@ if __name__ == "__main__":
     threads = []
 
     # Create two separate thread pools for mapNodes
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    #     future1 = executor.submit(run_map_group_pair, 1, controller, controller.half_chunks)
+    #     future2 = executor.submit(run_map_group_pair, 2, controller, controller.half_chunks)
+
+    # concurrent.futures.wait([future1, future2])
+    
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        future1 = executor.submit(run_map_group_pair, 1, controller, controller.half_chunks)
-        future2 = executor.submit(run_map_group_pair, 2, controller, controller.half_chunks)
-
+        groupNode1 = groupNode(1, f"groupNode-1", controller, 'mapStep1', 1)
+        groupNode2 = groupNode(2, f"groupNode-2", controller, 'mapStep2', 2)
+        future1 = executor.submit(groupNode1.run)
+        future2 = executor.submit(groupNode2.run)
     concurrent.futures.wait([future1, future2])
-
     print("Exiting Main Thread")
 
+        
+        
+        
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
     #     for filename in os.listdir("chunks"):
