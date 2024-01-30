@@ -3,7 +3,8 @@
 /mapStep
 /mapStep1
 /mapStep2
-/groupStep
+/groupStep1
+/groupStep2
 /reduceStep
 map_reduce_log.txt
 map.txt
