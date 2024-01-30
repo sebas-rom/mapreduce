@@ -98,11 +98,9 @@ class groupNode(threading.Thread):
         print("Exiting " + self.name)
 
 def group_f(folder_path, executor_id):
-    print('grouping '+folder_path) 
     groupedResults = []
     for filename in os.listdir(folder_path):    
         new_path = os.path.join(folder_path, filename)
-        print('opening '+new_path)
         loaded_map = read_result_from_file(new_path)
         groupedResults.extend(loaded_map)
 
@@ -110,8 +108,12 @@ def group_f(folder_path, executor_id):
     save_to_file(sorted_results, 'group',f'groupStep{executor_id}')
 
 def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
+    os.makedirs(f"mapStep{executor_id}", exist_ok=True)
+    os.makedirs(f"mapStep{executor_id}", exist_ok=True)
+    os.makedirs(f"groupStep{executor_id}", exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as map_executor, \
-            concurrent.futures.ThreadPoolExecutor(max_workers=1) as group_executor:
+            concurrent.futures.ThreadPoolExecutor(max_workers=1) as group_executor, \
+                concurrent.futures.ThreadPoolExecutor(max_workers=1) as reduce_executor:
 
         map_threads = []
         for i in range(1, max_chunks_per_executor + 1):
@@ -125,36 +127,34 @@ def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
         nodeG = groupNode(f"groupNode-{executor_id}",  f'mapStep{executor_id}',executor_id) 
         futureG = group_executor.submit(nodeG.run)
         concurrent.futures.wait([futureG])
+        
+        nodeR = reduceNode(f"reduceNode-{executor_id}",  f'groupStep{executor_id}',executor_id)
+        futureR = reduce_executor.submit(nodeR.run)
+        concurrent.futures.wait([futureR])
 
 class reduceNode(threading.Thread):
-    def __init__(self, threadID, name, counter, file_pair): 
+    def __init__(self, name, folder_path, executor_id): 
         threading.Thread.__init__(self)
-        self.threadID = threadID
         self.name = name
-        self.counter = counter
-        self.file_pair = file_pair
+        self.folder_path = folder_path
+        self.executor_id = executor_id
 
     def run(self):
         print("Starting " + self.name)
-        reduce_f(self.file_pair[0], self.file_pair[1])
+        reduce_f(self.folder_path, self.executor_id)
         print("Exiting " + self.name)
 
-def reduce_f(input_file1, input_file2):
-        file_path1 = os.path.join("groupStep", input_file1)
-        file_path2 = os.path.join("groupStep", input_file2)
+def reduce_f(folder_path, executor_id):
+        groupedResults = []
+        for filename in os.listdir(folder_path):    
+            new_path = os.path.join(folder_path, filename)
+            loaded_map = read_result_from_file(new_path)
+            groupedResults.extend(loaded_map)
 
-        loaded_group = read_result_from_file(file_path1)+read_result_from_file(file_path2)
-        reduced_results = reduce_function(loaded_group)
-        save_to_file(reduced_results, input_file1.replace('.txt', '') + '_to_' +input_file2.replace('.txt', '')+ '_reduce','reduceStep')
-
+        reducedResults = reduce_function(groupedResults)
+        save_to_file(reducedResults, 'reduced',f'reduceStep{executor_id}')
 
 if __name__ == "__main__":
-    os.makedirs("mapStep", exist_ok=True)
-    os.makedirs("mapStep1", exist_ok=True)
-    os.makedirs("mapStep2", exist_ok=True)
-    os.makedirs("groupStep1", exist_ok=True)
-    os.makedirs("groupStep2", exist_ok=True)
-    os.makedirs("reduceStep", exist_ok=True)
 
     input_file_path = 'texts/test.txt' 
     output_directory = 'chunks'
