@@ -18,6 +18,7 @@ def shuffle_and_sort(mapped_results):
     for word, count in mapped_results:
         sorted_results[word].append(count)
     
+    sorted_results=dict(sorted(sorted_results.items()))
     return sorted_results.items()
 
 def reduce_function(sorted_results):
