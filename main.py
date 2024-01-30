@@ -102,6 +102,21 @@ def group_f(input_file):
         sorted_results = shuffle_and_sort(loaded_map)
         save_to_file(sorted_results, input_file.replace('.txt', '') + '_group','groupStep')
 
+def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as map_executor, \
+            concurrent.futures.ThreadPoolExecutor(max_workers=1) as group_executor:
+
+        map_threads = []
+        for i in range(1, max_chunks_per_executor + 1):
+            node = mapNode(1, f"mapNode-{i}-{executor_id}", controller, executor_id, max_chunks_per_executor)
+            future = map_executor.submit(node.run)
+            map_threads.append(future)
+
+        concurrent.futures.wait(map_threads)
+        print(f"Map Executor {executor_id} finished. Starting groupNode.")
+
+        # group_executor.submit(groupNode, 1, f"groupNode-{executor_id}", 1, 'mapStep')  # Placeholder for actual input
+
 class reduceNode(threading.Thread):
     def __init__(self, threadID, name, counter, file_pair): 
         threading.Thread.__init__(self)
@@ -128,7 +143,8 @@ if __name__ == "__main__":
     os.makedirs("mapStep", exist_ok=True)
     os.makedirs("mapStep1", exist_ok=True)
     os.makedirs("mapStep2", exist_ok=True)
-    os.makedirs("groupStep", exist_ok=True)
+    os.makedirs("groupStep1", exist_ok=True)
+    os.makedirs("groupStep2", exist_ok=True)
     os.makedirs("reduceStep", exist_ok=True)
 
     input_file_path = 'texts/test.txt' 
@@ -145,21 +161,13 @@ if __name__ == "__main__":
     threads = []
 
     # Create two separate thread pools for mapNodes
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor1, \
-            concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor2:
-        for i in range(1, total_chunks + 1):
-            # PseudoComputer 1
-            node1 = mapNode(1, f"mapNode-{i}-1", controller, 1, controller.half_chunks)
-            future1 = executor1.submit(node1.run)
-            threads.append(future1)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        future1 = executor.submit(run_map_group_pair, 1, controller, controller.half_chunks)
+        future2 = executor.submit(run_map_group_pair, 2, controller, controller.half_chunks)
 
-            # PseudoComputer 2
-            node2 = mapNode(2, f"mapNode-{i}-2", controller, 2, controller.half_chunks)
-            future2 = executor2.submit(node2.run)
-            threads.append(future2)
+    concurrent.futures.wait([future1, future2])
 
-    # Wait for all threads to complete
-    concurrent.futures.wait(threads)
+    print("Exiting Main Thread")
 
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -188,4 +196,4 @@ if __name__ == "__main__":
     # Wait for all threads to complete
     # concurrent.futures.wait(threads)
 
-    print("Exiting Map Thread")
+    print("Exiting Map Thread") 
