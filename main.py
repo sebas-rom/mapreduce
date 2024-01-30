@@ -191,9 +191,9 @@ def runComputers(computer_number):
     print("Exiting Main Thread")
 if __name__ == "__main__":
 
-    input_file_path = "texts/test.txt"
+    input_file_path = "texts/bible.txt"
 
-    split_and_lowercase(input_file_path, 'chunks', 10 * 1024 * 1024)
+    split_and_lowercase(input_file_path, 'chunks', 30 * 1024 * 1024)
 
     runComputers(2)
 
