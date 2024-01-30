@@ -5,6 +5,8 @@ import concurrent.futures
 from file_splitter import split_and_lowercase
 from map_reduce import read_chunk,map_function,save_to_file,read_result_from_file,shuffle_and_sort,reduce_function
 exitFlag = 0
+from map_reduce import read_chunk,map_function,save_to_file,read_result_from_file,shuffle_and_sort,reduce_function
+exitFlag = 0
 # Global variable to signal the threads to stop
 stop_threads = False
 
