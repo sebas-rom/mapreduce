@@ -5,7 +5,10 @@ import json
 
 def read_chunk(file_path):
     with open(file_path, 'r') as file:
-        return file.read()
+        content = file.read()
+        # Use regular expression to remove numbers
+        content_without_numbers = re.sub(r'\d+', '', content)
+        return content_without_numbers
 
 def map_function(chunk):
     words = re.findall(r'\b\w+\b', chunk)
