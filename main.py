@@ -110,7 +110,7 @@ def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
             concurrent.futures.ThreadPoolExecutor(max_workers=1) as group_executor:
 
         map_threads = []
-        for i in range(1, max_chunks_per_executor + 1):
+        for i in range(1, max_chunks_per_executor):
             node = mapNode(1, f"mapNode-{i}-{executor_id}", controller, executor_id, max_chunks_per_executor)
             future = map_executor.submit(node.run)
             map_threads.append(future)
