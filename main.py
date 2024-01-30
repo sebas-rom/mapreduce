@@ -123,16 +123,21 @@ if __name__ == "__main__":
 
     threads = []
 
-     # Create two thread pools for mapNodes
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        for i in range(1, 5):
-            for j in range(1, 3):
-                node = mapNode(j, f"mapNode-{i}-{j}", controller)
-                future = executor.submit(node.run)
-                threads.append(future)
+     # Create two separate thread pools for mapNodes
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor1, \
+            concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor2:
+        for i in range(1, 3):
+            node1 = mapNode(1, f"mapNode-{i}-1", controller)
+            future1 = executor1.submit(node1.run)
+            threads.append(future1)
+
+            node2 = mapNode(2, f"mapNode-{i}-2", controller)
+            future2 = executor2.submit(node2.run)
+            threads.append(future2)
 
     # Wait for all threads to complete
     concurrent.futures.wait(threads)
+
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
     #     for filename in os.listdir("chunks"):
