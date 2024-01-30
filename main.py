@@ -96,27 +96,21 @@ class groupNode(threading.Thread):
         self.executor_id = executor_id
         self.input_dir = input_dir
        
-
     def run(self):
         while not stop_threads:
-            print("Starting " + self.name)
-            sorted_results_all = []
+            print("Starting " + self.name)  
             for filename in os.listdir(self.input_dir):
                 print(f"{self.name} processing {filename}")
-                sorted_results_all.extend(self.group_f(filename))
-            save_to_file(sorted_results_all, f"groupStep{self.executor_id}", f'groupStep{self.executor_id}')
+                self.group_f(filename)
             print("Exiting " + self.name)
             print(f"Group Executor {self.executor_id} finished.")
             break
-    
     def group_f(self,input_file):
-        print(f"Grouping {input_file}")
         #print the actual path
         file_path = (os.path.join(self.input_dir, input_file))
-        #print(file_path)
         loaded_map = read_result_from_file(file_path)
-        #print(loaded_map)
-        return loaded_map
+        sorted_results = shuffle_and_sort(loaded_map)
+        save_to_file(sorted_results, input_file.replace('.txt', '') + '_group',f'groupStep{self.executor_id}')
         
 
 def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
