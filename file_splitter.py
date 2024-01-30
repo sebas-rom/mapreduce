@@ -1,8 +1,13 @@
 import os
+import shutil
 
 def split_and_lowercase(input_file, output_dir, chunk_size):
+
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
     # Create the output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
+    
 
     with open(input_file, 'rb') as infile:
         chunk_number = 1
