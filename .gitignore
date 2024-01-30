@@ -5,7 +5,8 @@
 /mapStep2
 /groupStep1
 /groupStep2
-/reduceStep
+/reduceStep1
+/reduceStep2
 map_reduce_log.txt
 map.txt
 shuffle_sort.txt
