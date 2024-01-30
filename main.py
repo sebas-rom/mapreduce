@@ -76,7 +76,9 @@ class mapNode(threading.Thread):
                 except Exception as e:
                     print(f"{self.name} failed processing chunk_{chunk_id}: {str(e)}")
                     self.controller.mark_chunk_failed(chunk_id)
-
+            else:
+                print(f"{self.name} no more chunks available. Stopping.")
+                break
     def map_chunk(self, chunk_id):
         file_path = os.path.join("chunks", f"chunk_{chunk_id}.txt")
         chunk = read_chunk(file_path)
