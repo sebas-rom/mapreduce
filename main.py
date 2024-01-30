@@ -41,21 +41,36 @@ class Controller:
             self.failed_chunks.append(chunk_id)
 
 class mapNode(threading.Thread):
-    def __init__(self, threadID, name, controller): 
+    def __init__(self, threadID, name, controller, executor_id, max_chunks_per_executor): 
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
         self.controller = controller
+        self.executor_id = executor_id
+        self.max_chunks_per_executor = max_chunks_per_executor
+        self.processed_chunks = 0
 
     def run(self):
         while not stop_threads:
             chunk_id = self.controller.get_next_available_chunk()
             if chunk_id is not None:
+                # Check if the maximum chunks per executor is reached
+                if self.processed_chunks >= self.max_chunks_per_executor:
+                    print(f"{self.name} reached maximum chunks. Stopping.")
+                    break
+
                 print(f"{self.name} processing chunk_{chunk_id}")
                 try:
                     self.map_chunk(chunk_id)
                     print(f"{self.name} exiting chunk_{chunk_id}")
                     self.controller.mark_chunk_completed(chunk_id)
+                    self.processed_chunks += 1
+
+                    # If half of the chunks are processed, stop receiving new chunks
+                    if self.processed_chunks == self.max_chunks_per_executor // 2:
+                        print(f"{self.name} reached half of the chunks. Stopping further processing.")
+                        break
+
                 except Exception as e:
                     print(f"{self.name} failed processing chunk_{chunk_id}: {str(e)}")
                     self.controller.mark_chunk_failed(chunk_id)
@@ -64,7 +79,7 @@ class mapNode(threading.Thread):
         file_path = os.path.join("chunks", f"chunk_{chunk_id}.txt")
         chunk = read_chunk(file_path)
         mapped_result = map_function(chunk)
-        save_to_file(mapped_result, f"chunk_{chunk_id}_map", 'mapStep')
+        save_to_file(mapped_result, f"chunk_{chunk_id}_map", f'mapStep{self.executor_id}')
 
 class groupNode(threading.Thread):
     def __init__(self, threadID, name, counter, input_file): 
@@ -114,24 +129,26 @@ if __name__ == "__main__":
 
     input_file_path = 'texts/test.txt' 
     output_directory = 'chunks'
-    max_chunk_size = 30 * 1024 * 1024  # 31.5MB
+    max_chunk_size = 10 * 1024 * 1024  # 31.5MB
 
-    # split_and_lowercase(input_file_path, output_directory, max_chunk_size)
+    #split_and_lowercase(input_file_path, output_directory, max_chunk_size)
 
     controller = Controller()
     controller.initialize_chunks(output_directory)
 
     threads = []
 
-     # Create two separate thread pools for mapNodes
+    # Create two separate thread pools for mapNodes
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor1, \
             concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor2:
         for i in range(1, 3):
-            node1 = mapNode(1, f"mapNode-{i}-1", controller)
+            # PseudoComputer 1
+            node1 = mapNode(1, f"mapNode-{i}-1", controller, 1, 4)
             future1 = executor1.submit(node1.run)
             threads.append(future1)
 
-            node2 = mapNode(2, f"mapNode-{i}-2", controller)
+            # PseudoComputer 2
+            node2 = mapNode(2, f"mapNode-{i}-2", controller, 2, 4)
             future2 = executor2.submit(node2.run)
             threads.append(future2)
 

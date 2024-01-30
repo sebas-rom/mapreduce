@@ -1,6 +1,8 @@
 /chunks
 /logs
 /mapStep
+/mapStep1
+/mapStep2
 /groupStep
 /reduceStep
 map_reduce_log.txt
