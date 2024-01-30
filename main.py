@@ -9,12 +9,14 @@ exitFlag = 0
 stop_threads = False
 
 class Controller:
-    def __init__(self):
+    def __init__(self, total_chunks):
         self.chunk_state = {}  # To store the state of each chunk: available, completed, failed
         self.available_chunks = []  # List to keep track of available chunks
         self.completed_chunks = []  # List to keep track of completed chunks
         self.failed_chunks = []  # List to keep track of failed chunks
         self.lock = threading.Lock()  # Lock to ensure thread-safe operations
+        self.total_chunks = total_chunks
+        self.half_chunks = (total_chunks + 1) // 2  # Calculate half of total chunks
 
     def initialize_chunks(self, folder_path):
         for filename in os.listdir(folder_path):
@@ -124,6 +126,8 @@ def reduce_f(input_file1, input_file2):
 
 if __name__ == "__main__":
     os.makedirs("mapStep", exist_ok=True)
+    os.makedirs("mapStep1", exist_ok=True)
+    os.makedirs("mapStep2", exist_ok=True)
     os.makedirs("groupStep", exist_ok=True)
     os.makedirs("reduceStep", exist_ok=True)
 
@@ -133,7 +137,9 @@ if __name__ == "__main__":
 
     #split_and_lowercase(input_file_path, output_directory, max_chunk_size)
 
-    controller = Controller()
+    total_chunks = len([filename for filename in os.listdir(output_directory) if filename.endswith(".txt")])
+
+    controller = Controller(total_chunks)
     controller.initialize_chunks(output_directory)
 
     threads = []
@@ -141,14 +147,14 @@ if __name__ == "__main__":
     # Create two separate thread pools for mapNodes
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor1, \
             concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor2:
-        for i in range(1, 3):
+        for i in range(1, total_chunks + 1):
             # PseudoComputer 1
-            node1 = mapNode(1, f"mapNode-{i}-1", controller, 1, 4)
+            node1 = mapNode(1, f"mapNode-{i}-1", controller, 1, controller.half_chunks)
             future1 = executor1.submit(node1.run)
             threads.append(future1)
 
             # PseudoComputer 2
-            node2 = mapNode(2, f"mapNode-{i}-2", controller, 2, 4)
+            node2 = mapNode(2, f"mapNode-{i}-2", controller, 2, controller.half_chunks)
             future2 = executor2.submit(node2.run)
             threads.append(future2)
 
@@ -180,6 +186,6 @@ if __name__ == "__main__":
 
 
     # Wait for all threads to complete
-    concurrent.futures.wait(threads)
+    # concurrent.futures.wait(threads)
 
     print("Exiting Map Thread")
