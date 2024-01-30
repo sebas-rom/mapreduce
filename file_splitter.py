@@ -1,7 +1,7 @@
 import os
 import shutil
 
-def split_and_lowercase(input_file, output_dir, chunk_size):
+def split_and_lowercase(input_file, output_dir = 'chunks', chunk_size= 30 * 1024 * 1024):
 
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
