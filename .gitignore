@@ -1,14 +1,8 @@
 /chunks
 /logs
-/mapStep
-/mapStep1
-/mapStep2
-/groupStep1
-/groupStep2
-/reduceStep1
-/reduceStep2
-/groupStep
-/reduceStep
+/mapStep*
+/groupStep*
+/reduceStep*
 map_reduce_log.txt
 map.txt
 shuffle_sort.txt

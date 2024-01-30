@@ -179,26 +179,24 @@ def run_map_group_pair(executor_id, controller, max_chunks_per_executor):
         futureR = reduce_executor.submit(nodeR.run)
         concurrent.futures.wait([futureR])
 
+def runComputers(computer_number):
+    total_chunks = len([filename for filename in os.listdir('chunks') if filename.endswith(".txt")])
+    controller = Controller(total_chunks)
+    controller.initialize_chunks('chunks')
+    with concurrent.futures.ThreadPoolExecutor(max_workers=computer_number) as executor:
+        futures = [executor.submit(run_map_group_pair, i, controller, controller.half_chunks) for i in range(1, computer_number + 1)]
+    
+    wait(futures)
+    print("Exiting Main Thread")
 if __name__ == "__main__":
 
     input_file_path = "texts/test.txt"
-    output_directory = "chunks"
-    max_chunk_size = 30 * 1024 * 1024  # 31.5MB
 
-    split_and_lowercase(input_file_path, output_directory, max_chunk_size)
+    split_and_lowercase(input_file_path)
 
-    total_chunks = len([filename for filename in os.listdir(output_directory) if filename.endswith(".txt")])
+    runComputers(2)
 
-    controller = Controller(total_chunks)
-    controller.initialize_chunks(output_directory)
+    
 
-    threads = []
 
-    # Create two separate thread pools for mapNodes
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        future1 = executor.submit(run_map_group_pair, 1, controller, controller.half_chunks)
-        future2 = executor.submit(run_map_group_pair, 2, controller, controller.half_chunks)
-
-    wait([future1, future2])
-
-    print("Exiting Main Thread")
+    
