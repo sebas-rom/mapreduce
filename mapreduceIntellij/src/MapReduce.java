@@ -1,14 +1,12 @@
 import java.io.*;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Collections;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
-// Simple class to represent a key-value pair
+
 class KeyValue {
     String key;
     List<Integer> value;
@@ -20,16 +18,11 @@ class KeyValue {
 }
 
 public class MapReduce {
-    // Updated readChunk function to extract words without numbers or punctuations
-    // Updated readChunk function to filter out numbers and punctuation marks
     public static String readChunk(String filepath) {
         StringBuilder content = new StringBuilder();
 
         try (BufferedReader br = new BufferedReader(new FileReader(filepath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                content.append(line).append("\n");
-            }
+            br.lines().forEach(line -> content.append(line).append("\n"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -37,16 +30,13 @@ public class MapReduce {
         return filterWords(content.toString());
     }
 
-    // Helper function to filter out numbers and punctuation marks
     private static String filterWords(String input) {
-        // Use a regular expression to match words and filter out numbers or punctuation marks
         String regex = "\\b(?:[a-zA-Z]+)\\b";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);
 
         StringBuilder filteredContent = new StringBuilder();
 
-        // Append matched words to the filtered content
         while (matcher.find()) {
             filteredContent.append(matcher.group()).append(" ");
         }
@@ -54,24 +44,20 @@ public class MapReduce {
         return filteredContent.toString().trim();
     }
 
-    // Function to save a List of KeyValues to a JSON file
     public static void saveJson(List<KeyValue> result, String outputPath) {
         try (FileWriter writer = new FileWriter(outputPath)) {
-            Gson gson = new Gson();
-            gson.toJson(result, writer);
+            new Gson().toJson(result, writer);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // Function to read a JSON file and convert it back to a List of KeyValues
     public static List<KeyValue> readJson(String filePath) {
         List<KeyValue> keyValueList = new ArrayList<>();
 
         try (FileReader reader = new FileReader(filePath)) {
-            Gson gson = new Gson();
             Type type = new TypeToken<List<KeyValue>>(){}.getType();
-            keyValueList = gson.fromJson(reader, type);
+            keyValueList = new Gson().fromJson(reader, type);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -79,86 +65,86 @@ public class MapReduce {
         return keyValueList;
     }
 
-    // Function to map words in a chunk to the number 1 and store in a list of KeyValue objects
     public static List<KeyValue> map(String chunk) {
         List<KeyValue> wordList = new ArrayList<>();
 
-        // Splitting the chunk into words and updating the word count list
         String[] words = chunk.split("\\s+");
         for (String word : words) {
-            List<Integer> countList = new ArrayList<>();
-            countList.add(1);
-            wordList.add(new KeyValue(word, countList));
+            wordList.add(new KeyValue(word, Collections.singletonList(1)));
         }
 
         return wordList;
     }
 
-    // Function to group repeated key values and store their values in the same array
-    // Function to group repeated key values and store their values in the same array
     public static List<KeyValue> group(List<KeyValue> mapResult) {
-        List<KeyValue> groupedList = new ArrayList<>();
+        Map<String, List<Integer>> groupedMap = new HashMap<>();
 
         for (KeyValue keyValue : mapResult) {
-            String key = keyValue.key;
-            List<Integer> values = keyValue.value;
-
-            // Check if the key already exists in the grouped list
-            boolean keyExists = false;
-            for (KeyValue groupItem : groupedList) {
-                if (groupItem.key.equals(key)) {
-                    keyExists = true;
-                    groupItem.value.addAll(values);
-                    break;
-                }
-            }
-
-            // If the key is not in the grouped list, add it with the current values
-            if (!keyExists) {
-                groupedList.add(new KeyValue(key, new ArrayList<>(values)));
-            }
+            groupedMap.computeIfAbsent(keyValue.key, k -> new ArrayList<>()).addAll(keyValue.value);
         }
 
-        // Sort the grouped list alphabetically based on keys
-        Collections.sort(groupedList, (a, b) -> a.key.compareTo(b.key));
-
-        return groupedList;
+        return groupedMap.entrySet().stream()
+                .map(entry -> new KeyValue(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparing(kv -> kv.key))
+                .toList();
     }
 
-    // Function to reduce by summing the integer array for each key
     public static List<KeyValue> reduce(List<KeyValue> groupResult) {
-        List<KeyValue> reducedList = new ArrayList<>();
-
-        for (KeyValue keyValue : groupResult) {
-            String key = keyValue.key;
-            List<Integer> values = keyValue.value;
-
-            // Sum the values in the integer array
-            int sum = values.stream().mapToInt(Integer::intValue).sum();
-
-            // Create a new KeyValue with the key and the summed value
-            KeyValue reducedItem = new KeyValue(key, Collections.singletonList(sum));
-
-            reducedList.add(reducedItem);
-        }
-
-        return reducedList;
+        return groupResult.stream()
+                .map(keyValue -> new KeyValue(keyValue.key, Collections.singletonList(keyValue.value.stream().mapToInt(Integer::intValue).sum())))
+                .toList();
     }
 
+    private static void createDirectory(String directoryPath) {
+        File directory = new File(directoryPath);
+        if (!directory.exists() && directory.mkdirs()) {
+            System.out.println("Directory created: " + directoryPath);
+        } else {
+            System.out.println("Failed to create directory: " + directoryPath);
+        }
+    }
+
+    public static void deleteDirectory(String path) {
+        File directory = new File(path);
+
+        if (directory.exists()) {
+            Arrays.stream(directory.listFiles()).forEach(file -> {
+                if (file.isDirectory()) {
+                    deleteDirectory(file.getAbsolutePath());
+                } else {
+                    file.delete();
+                }
+            });
+
+            if (directory.delete()) {
+                System.out.println("Directory deleted: " + path);
+            } else {
+                System.out.println("Failed to delete directory: " + path);
+            }
+        } else {
+            System.out.println("Directory does not exist: " + path);
+        }
+    }
+
+    public static void directoryUtils(){
+        List.of("output", "output/map", "output/group", "output/reduce", "output/join").forEach(MapReduce::deleteDirectory);
+        List.of("output", "output/map", "output/group", "output/reduce", "output/join").forEach(MapReduce::createDirectory);
+    }
+
+    public static void mapTask(){
+        // Implement the map task logic here
+    }
 
     public static void main(String[] args) {
-        // Example usage in the main function
+        directoryUtils();
+
         String filePath = "chunks/chunk_1.txt";
         String chunk = readChunk(filePath);
 
         saveJson(map(chunk), "output/map.json");
 
-        // Group step
-        List<KeyValue> mapResult = readJson("output/map.json");
-        saveJson(group(mapResult), "output/group.json");
+        saveJson(group(readJson("output/map.json")), "output/group.json");
 
-        //Reduce step
-        List<KeyValue> groupResult = readJson("output/group.json");
-        saveJson(reduce(groupResult), "output/reduced.json");
+        saveJson(reduce(readJson("output/group.json")), "output/reduced.json");
     }
 }
