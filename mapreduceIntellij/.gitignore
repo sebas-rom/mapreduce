@@ -27,3 +27,18 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+
+/chunks
+/logs
+/mapStep*
+/groupStep*
+/reduceStep*
+/output
+map_reduce_log.txt
+map.txt
+shuffle_sort.txt
+result.txt
+.DS_Store
+/texts/bible.txt
+```
