@@ -1,73 +1,27 @@
 import java.io.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.Collections;
 
 // Simple class to represent a key-value pair
 class KeyValue {
     String key;
-    Integer value;
+    List<Integer> value;
 
-    KeyValue(String key, Integer value) {
+    KeyValue(String key, List<Integer> value) {
         this.key = key;
         this.value = value;
     }
 }
 
 public class MapReduce {
-
-
-    // Function to convert List<Map.Entry<String, Integer>> to List<KeyValue>
-    private static List<KeyValue> convertToKeyValueList(List<Map.Entry<String, Integer>> entryList) {
-        List<KeyValue> keyValueList = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : entryList) {
-            keyValueList.add(new KeyValue(entry.getKey(), entry.getValue()));
-        }
-        return keyValueList;
-    }
-
-    // Function to convert List<KeyValue> to List<Map.Entry<String, Integer>>
-    private static List<Map.Entry<String, Integer>> convertToMapEntryList(List<KeyValue> keyValueList) {
-        List<Map.Entry<String, Integer>> entryList = new ArrayList<>();
-        for (KeyValue keyValue : keyValueList) {
-            entryList.add(Map.entry(keyValue.key, keyValue.value));
-        }
-        return entryList;
-    }
-
-    // Function to save a List of Map Entries to a JSON file
-    public static void saveJson(List<Map.Entry<String, Integer>> result, String outputPath) {
-        List<KeyValue> keyValueList = convertToKeyValueList(result);
-        try (FileWriter writer = new FileWriter(outputPath)) {
-            Gson gson = new Gson();
-            gson.toJson(keyValueList, writer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    // Function to read a JSON file and convert it back to a List of Map Entries
-    public static List<Map.Entry<String, Integer>> readJson(String filePath) {
-        List<KeyValue> keyValueList = new ArrayList<>();
-
-        try (FileReader reader = new FileReader(filePath)) {
-            Gson gson = new Gson();
-            Type type = new TypeToken<List<KeyValue>>(){}.getType();
-            keyValueList = gson.fromJson(reader, type);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return convertToMapEntryList(keyValueList);
-    }
-
-
-    // Function to read a chunk from a file and return its content as a string
+    // Updated readChunk function to extract words without numbers or punctuations
+    // Updated readChunk function to filter out numbers and punctuation marks
     public static String readChunk(String filepath) {
         StringBuilder content = new StringBuilder();
 
@@ -80,36 +34,95 @@ public class MapReduce {
             e.printStackTrace();
         }
 
-        return content.toString();
+        return filterWords(content.toString());
     }
 
-    // Function to map words in a chunk to the number 1 and store in a list of tuples
-    public static List<Map.Entry<String, Integer>> map(String chunk) {
-        Map<String, Integer> wordCountMap = new HashMap<>();
+    // Helper function to filter out numbers and punctuation marks
+    private static String filterWords(String input) {
+        // Use a regular expression to match words and filter out numbers or punctuation marks
+        String regex = "\\b(?:[a-zA-Z]+)\\b";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(input);
 
-        // Splitting the chunk into words and updating the word count map
-        String[] words = chunk.split("\\s+");
-        for (String word : words) {
-            wordCountMap.put(word, 1);
+        StringBuilder filteredContent = new StringBuilder();
+
+        // Append matched words to the filtered content
+        while (matcher.find()) {
+            filteredContent.append(matcher.group()).append(" ");
         }
 
-        // Converting the map entries to a list of tuples
-        List<Map.Entry<String, Integer>> wordList = new ArrayList<>(wordCountMap.entrySet());
+        return filteredContent.toString().trim();
+    }
+
+    // Function to save a List of KeyValues to a JSON file
+    public static void saveJson(List<KeyValue> result, String outputPath) {
+        try (FileWriter writer = new FileWriter(outputPath)) {
+            Gson gson = new Gson();
+            gson.toJson(result, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Function to read a JSON file and convert it back to a List of KeyValues
+    public static List<KeyValue> readJson(String filePath) {
+        List<KeyValue> keyValueList = new ArrayList<>();
+
+        try (FileReader reader = new FileReader(filePath)) {
+            Gson gson = new Gson();
+            Type type = new TypeToken<List<KeyValue>>(){}.getType();
+            keyValueList = gson.fromJson(reader, type);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return keyValueList;
+    }
+
+    // Function to map words in a chunk to the number 1 and store in a list of KeyValue objects
+    public static List<KeyValue> map(String chunk) {
+        List<KeyValue> wordList = new ArrayList<>();
+
+        // Splitting the chunk into words and updating the word count list
+        String[] words = chunk.split("\\s+");
+        for (String word : words) {
+            List<Integer> countList = new ArrayList<>();
+            countList.add(1);
+            wordList.add(new KeyValue(word, countList));
+        }
 
         return wordList;
     }
-    // Helper method
-    // to create directories if they don't exist
-    private static void createDirectory(String directoryPath) {
-        File directory = new File(directoryPath);
-        if (!directory.exists()) {
-            boolean created = directory.mkdirs();
-            if (created) {
-                System.out.println("Directory created: " + directoryPath);
-            } else {
-                System.out.println("Failed to create directory: " + directoryPath);
+
+    // Function to group repeated key values and store their values in the same array
+    // Function to group repeated key values and store their values in the same array
+    public static List<KeyValue> group(List<KeyValue> mapResult) {
+        List<KeyValue> groupedList = new ArrayList<>();
+
+        for (KeyValue keyValue : mapResult) {
+            String key = keyValue.key;
+            List<Integer> values = keyValue.value;
+
+            // Check if the key already exists in the grouped list
+            boolean keyExists = false;
+            for (KeyValue groupItem : groupedList) {
+                if (groupItem.key.equals(key)) {
+                    keyExists = true;
+                    groupItem.value.addAll(values);
+                    break;
+                }
+            }
+
+            // If the key is not in the grouped list, add it with the current values
+            if (!keyExists) {
+                groupedList.add(new KeyValue(key, new ArrayList<>(values)));
             }
         }
+
+        // Sort the grouped list alphabetically based on keys
+        Collections.sort(groupedList, (a, b) -> a.key.compareTo(b.key));
+
+        return groupedList;
     }
 
     public static void main(String[] args) {
@@ -117,13 +130,13 @@ public class MapReduce {
         String filePath = "chunks/chunk_1.txt";
         String chunk = readChunk(filePath);
 
-        String outputPath = "output/result.json";
-        saveJson(map(chunk), outputPath);
+        saveJson(map(chunk), "output/map.json");
 
-        //Group step
-        //
-        // Reading the JSON file back to a List of Map Entries
-        List<Map.Entry<String, Integer>> readResult = readJson(outputPath);
+        // Group step
+        List<KeyValue> mapResult = readJson("output/map.json");
+        saveJson(group(mapResult), "output/group.json");
 
+        //Reduce step
+        // 
     }
 }
