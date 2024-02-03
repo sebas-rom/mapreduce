@@ -125,6 +125,27 @@ public class MapReduce {
         return groupedList;
     }
 
+    // Function to reduce by summing the integer array for each key
+    public static List<KeyValue> reduce(List<KeyValue> groupResult) {
+        List<KeyValue> reducedList = new ArrayList<>();
+
+        for (KeyValue keyValue : groupResult) {
+            String key = keyValue.key;
+            List<Integer> values = keyValue.value;
+
+            // Sum the values in the integer array
+            int sum = values.stream().mapToInt(Integer::intValue).sum();
+
+            // Create a new KeyValue with the key and the summed value
+            KeyValue reducedItem = new KeyValue(key, Collections.singletonList(sum));
+
+            reducedList.add(reducedItem);
+        }
+
+        return reducedList;
+    }
+
+
     public static void main(String[] args) {
         // Example usage in the main function
         String filePath = "chunks/chunk_1.txt";
@@ -137,6 +158,7 @@ public class MapReduce {
         saveJson(group(mapResult), "output/group.json");
 
         //Reduce step
-        // 
+        List<KeyValue> groupResult = readJson("output/group.json");
+        saveJson(reduce(groupResult), "output/reduced.json");
     }
 }
