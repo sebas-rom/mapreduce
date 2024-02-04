@@ -53,13 +53,13 @@ public class MapReduce {
     }
 
     public static List<KeyValue> readJson(String filePath) {
-        System.out.println("Reading JSON from: " + filePath);
+//        System.out.println("Reading JSON from: " + filePath);
         List<KeyValue> keyValueList = new ArrayList<>();
 
         try (FileReader reader = new FileReader(filePath)) {
             Type type = new TypeToken<List<KeyValue>>(){}.getType();
             keyValueList = new Gson().fromJson(reader, type);
-            System.out.println("Successfully read JSON from: " + filePath);
+//            System.out.println("Successfully read JSON from: " + filePath);
         } catch (IOException e) {
             System.err.println("Error reading JSON from: " + filePath);
             e.printStackTrace();
