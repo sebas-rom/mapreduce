@@ -2,10 +2,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 class Controller {
     private final Map<Integer, String> chunkState = new ConcurrentHashMap<>();
@@ -31,9 +28,11 @@ class Controller {
             }
         }
     }
+
     public int getHalfChunks() {
         return halfChunks;
     }
+
     public int getNextAvailableChunk() {
         synchronized (lock) {
             if (!availableChunks.isEmpty()) {
@@ -42,6 +41,14 @@ class Controller {
                 return -1;
             }
         }
+    }
+
+    public List<Integer> getFailedChunks() {
+        return failedChunks;
+    }
+
+    public List<Integer> getAvailableChunks() {
+        return availableChunks;
     }
 
     public void markChunkCompleted(int chunkId) {
@@ -67,6 +74,7 @@ class MapNode implements Runnable {
     private final int maxChunksPerExecutor;
     private int processedChunks = 0;
 
+
     public MapNode(int threadID, String name, Controller controller, int executorId, int maxChunksPerExecutor) {
         this.threadID = threadID;
         this.name = name;
@@ -79,6 +87,7 @@ class MapNode implements Runnable {
     public void run() {
         while (true) {
             int chunkId = controller.getNextAvailableChunk();
+
             if (chunkId != -1) {
                 if (processedChunks >= maxChunksPerExecutor) {
                     System.out.println(name + " reached maximum chunks. Stopping.");
@@ -86,29 +95,62 @@ class MapNode implements Runnable {
                 }
 
                 try {
-                    System.out.println("computer"+executorId + " processing chunk_" + chunkId);
-                    MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_"+chunkId+".txt")), "output/map"+executorId+"/" + chunkId + ".json");
+                    System.out.println("computer" + executorId + " processing chunk_" + chunkId);
+                    MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_" + chunkId + ".txt")), "output/map" + executorId + "/" + chunkId + ".json");
                     processedChunks++;
-                    System.out.println("\tcomputer"+executorId + " completed chunk_" + chunkId);
+                    System.out.println("\tcomputer" + executorId + " completed chunk_" + chunkId);
                 } catch (Exception e) {
                     System.out.println(name + " failed processing chunk_" + chunkId + ": " + e.getMessage());
                     controller.markChunkFailed(chunkId);
+                    processedChunks=processedChunks-2;
                 }
-            } else {
+            }  else if (!controller.getFailedChunks().isEmpty()) {
+            // Retry failed chunks if there are still available chunks
+            int failedChunkId = controller.getFailedChunks().remove(0);
+            System.out.println(name + " retrying failed chunk_" + failedChunkId);
+
+            try {
+                System.out.println("computer" + executorId + " processing chunk_" + failedChunkId);
+                MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_" + failedChunkId + ".txt")), "output/map" + executorId + "/" + failedChunkId + ".json");
+                System.out.println("\tcomputer" + executorId + " completed chunk_" + failedChunkId);
+            } catch (Exception e) {
+                System.out.println(name + " failed processing chunk_" + failedChunkId + ": " + e.getMessage());
+                controller.markChunkFailed(failedChunkId);
+            }
+
+//            processedChunks++;
+        }else {
                 System.out.println(name + " no more chunks available. Stopping.");
                 break;
             }
         }
     }
+
 }
+
+class NamedThreadFactory implements ThreadFactory {
+    private final String namePrefix;
+
+    public NamedThreadFactory(String namePrefix) {
+        this.namePrefix = namePrefix;
+    }
+
+    @Override
+    public Thread newThread(Runnable r) {
+        Thread t = new Thread(r);
+        t.setName(namePrefix + t.getId());
+        return t;
+    }
+}
+
 
 public class Main {
     public static void runMapReduceTask(int executorId, Controller controller, int maxChunksPerExecutor) {
-        ExecutorService mapExecutor = Executors.newFixedThreadPool(2);
+        ExecutorService mapExecutor = Executors.newFixedThreadPool(2, new NamedThreadFactory("MapExecutor-" + executorId + "-Thread-"));
 
         List<Future<?>> mapThreads = new ArrayList<>();
         for (int i = 1; i <= maxChunksPerExecutor; i++) {
-            MapNode node = new MapNode(1, "mapNode-" + i + "-" + executorId, controller, executorId, maxChunksPerExecutor);
+            MapNode node = new MapNode(i, "mapNode-" + executorId + "-" + i, controller, executorId, maxChunksPerExecutor);
             Future<?> future = mapExecutor.submit(node);
             mapThreads.add(future);
         }
@@ -118,6 +160,7 @@ public class Main {
                 future.get();
             } catch (Exception e) {
                 e.printStackTrace();
+                System.out.println("this is showing");
             }
         }
 
@@ -147,6 +190,7 @@ public class Main {
                     future.get();
                 } catch (Exception e) {
                     e.printStackTrace();
+
                 }
             }
 
