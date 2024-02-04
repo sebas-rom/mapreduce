@@ -86,8 +86,10 @@ class MapNode implements Runnable {
                 }
 
                 try {
-                    System.out.println(name + " processing chunk_" + chunkId);
+                    System.out.println("computer"+executorId + " processing chunk_" + chunkId);
+                    MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_"+chunkId+".txt")), "output/map"+executorId+"/" + chunkId + ".json");
                     processedChunks++;
+                    System.out.println("\tcomputer"+executorId + " completed chunk_" + chunkId);
                 } catch (Exception e) {
                     System.out.println(name + " failed processing chunk_" + chunkId + ": " + e.getMessage());
                     controller.markChunkFailed(chunkId);
