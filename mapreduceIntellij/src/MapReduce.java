@@ -53,12 +53,18 @@ public class MapReduce {
     }
 
     public static List<KeyValue> readJson(String filePath) {
+        System.out.println("Reading JSON from: " + filePath);
         List<KeyValue> keyValueList = new ArrayList<>();
 
         try (FileReader reader = new FileReader(filePath)) {
             Type type = new TypeToken<List<KeyValue>>(){}.getType();
             keyValueList = new Gson().fromJson(reader, type);
+            System.out.println("Successfully read JSON from: " + filePath);
         } catch (IOException e) {
+            System.err.println("Error reading JSON from: " + filePath);
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("Exception while reading JSON from: " + filePath);
             e.printStackTrace();
         }
 
@@ -95,10 +101,10 @@ public class MapReduce {
                 .toList();
     }
 
-    private static void createDirectory(String directoryPath) {
+    public static void createDirectory(String directoryPath) {
         File directory = new File(directoryPath);
         if (!directory.exists() && directory.mkdirs()) {
-            System.out.println("Directory created: " + directoryPath);
+//            System.out.println("Directory created: " + directoryPath);
         } else {
             System.out.println("Failed to create directory: " + directoryPath);
         }
@@ -117,7 +123,7 @@ public class MapReduce {
             });
 
             if (directory.delete()) {
-                System.out.println("Directory deleted: " + path);
+//                System.out.println("Directory deleted: " + path);
             } else {
                 System.out.println("Failed to delete directory: " + path);
             }

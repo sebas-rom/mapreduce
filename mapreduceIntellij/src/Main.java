@@ -85,47 +85,111 @@ class MapNode implements Runnable {
 
     @Override
     public void run() {
-        while (true) {
-            int chunkId = controller.getNextAvailableChunk();
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-            if (chunkId != -1) {
-                if (processedChunks >= maxChunksPerExecutor) {
-                    System.out.println(name + " reached maximum chunks. Stopping.");
-                    break;
+        try {
+            while (!controller.getAvailableChunks().isEmpty() || !controller.getFailedChunks().isEmpty()) {
+
+                int chunkId = controller.getNextAvailableChunk();
+
+                if (chunkId != -1) {
+                    if (processedChunks >= maxChunksPerExecutor) {
+                        System.out.println(name + " reached maximum chunks. Stopping.");
+                        break;
+                    }
+
+                    Future<?> future = executorService.submit(() -> {
+                        try {
+                            System.out.println("\tcomputer" + executorId + " Processing chunk_" + chunkId);
+                            MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_" + chunkId + ".txt")), "output/map" + executorId + "/" + chunkId + ".json");
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+
+                    try {
+                        future.get(35, TimeUnit.SECONDS);
+                        System.out.println("\tcomputer" + executorId + " completed chunk_" + chunkId);
+                        processedChunks++;
+                    } catch (TimeoutException e) {
+                        System.out.println(name + " timed out processing chunk_" + chunkId);
+                        controller.markChunkFailed(chunkId);
+                    } catch (Exception e) {
+                        System.out.println(name + " failed processing chunk_" + chunkId + ": " + e.getMessage());
+                        controller.markChunkFailed(chunkId);
+                    }
+                } else if (!controller.getFailedChunks().isEmpty()) {
+                    int failedChunkId = controller.getFailedChunks().remove(0);
+                    System.out.println(name + " retrying failed chunk_" + failedChunkId);
+
+                    try {
+                        MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_" + failedChunkId + ".txt")), "output/map" + executorId + "/" + failedChunkId + ".json");
+                        System.out.println("\tcomputer" + executorId + " completed chunk_" + failedChunkId);
+                        processedChunks++;
+                    } catch (Exception e) {
+                        System.out.println(name + " failed processing chunk_" + failedChunkId + ": " + e.getMessage());
+                        controller.markChunkFailed(failedChunkId);
+                    }
                 }
-
-                try {
-                    System.out.println("computer" + executorId + " processing chunk_" + chunkId);
-                    MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_" + chunkId + ".txt")), "output/map" + executorId + "/" + chunkId + ".json");
-                    processedChunks++;
-                    System.out.println("\tcomputer" + executorId + " completed chunk_" + chunkId);
-                } catch (Exception e) {
-                    System.out.println(name + " failed processing chunk_" + chunkId + ": " + e.getMessage());
-                    controller.markChunkFailed(chunkId);
-                    processedChunks=processedChunks-2;
-                }
-            }  else if (!controller.getFailedChunks().isEmpty()) {
-            // Retry failed chunks if there are still available chunks
-            int failedChunkId = controller.getFailedChunks().remove(0);
-            System.out.println(name + " retrying failed chunk_" + failedChunkId);
-
-            try {
-                System.out.println("computer" + executorId + " processing chunk_" + failedChunkId);
-                MapReduce.saveJson(MapReduce.map(MapReduce.readChunk("chunks/chunk_" + failedChunkId + ".txt")), "output/map" + executorId + "/" + failedChunkId + ".json");
-                System.out.println("\tcomputer" + executorId + " completed chunk_" + failedChunkId);
-            } catch (Exception e) {
-                System.out.println(name + " failed processing chunk_" + failedChunkId + ": " + e.getMessage());
-                controller.markChunkFailed(failedChunkId);
             }
-
-//            processedChunks++;
-        }else {
-                System.out.println(name + " no more chunks available. Stopping.");
-                break;
-            }
+            System.out.println(name + " no more chunks available. Stopping.");
+        } finally {
+            executorService.shutdown();
         }
     }
 
+}
+
+class GroupNode implements Runnable {
+    private final Controller controller;
+    private final int executorId;
+
+    public GroupNode(Controller controller, int executorId) {
+        this.controller = controller;
+        this.executorId = executorId;
+    }
+
+    @Override
+    public void run() {
+        MapReduce.deleteDirectory("output/group"+executorId);
+        MapReduce.deleteDirectory("output/group"+executorId+"final");
+        MapReduce.createDirectory("output/group"+executorId);
+        MapReduce.createDirectory("output/group"+executorId+"final");
+        System.out.println("GroupNode for executor " + executorId + " is running.");
+
+        // Assuming "output/map" + executorId is the directory to list files from
+        File mapOutputDirectory = new File("output/map" + executorId);
+
+//        Grouping individuall files into indiviual outputs
+        File[] mapFiles = mapOutputDirectory.listFiles();
+        if (mapFiles != null) {
+            for (File file : mapFiles) {
+                System.out.println("Computer" + executorId + " executing " + file.getName());
+                System.out.println("Computer" + executorId + " executing " + file.getName()+" Trying to read"+"output/map" + executorId + "/" + file.getName());
+                List<KeyValue> temporal = new ArrayList<>(MapReduce.readJson("output/map" + executorId + "/" + file.getName()));
+                System.out.println("Computer" + executorId + " executing " + file.getName()+"reached 2");
+                MapReduce.saveJson(MapReduce.group(temporal), "output/group" + executorId + "/" + file.getName());
+                System.out.println("Computer" + executorId + " executing " + file.getName()+"reached 3");
+            }
+        }
+
+//      Grouping all individual outputs into 1
+        File GroupOutputDirectory = new File("output/group" + executorId);
+
+        File[] groupFiles = GroupOutputDirectory.listFiles();
+        if (groupFiles != null) {
+            List<KeyValue> temporal = new ArrayList<>();
+            for (File file : groupFiles) {
+                System.out.println("\t\tgroupNode"+executorId+" processing final:"+file.getName());
+                temporal.addAll(MapReduce.readJson("output/group" + executorId + "/" + file.getName()));
+
+            }
+            MapReduce.saveJson(MapReduce.group(temporal), "output/group" + executorId + "final/group.json");
+        }
+
+
+        System.out.println("GroupNode for executor " + executorId + " finished.");
+    }
 }
 
 class NamedThreadFactory implements ThreadFactory {
@@ -145,12 +209,20 @@ class NamedThreadFactory implements ThreadFactory {
 
 
 public class Main {
+    public static void directoryUtils() {
+        List.of("output").forEach(MapReduce::deleteDirectory);
+        List.of("output", "output/map1", "output/map2", "output/group1", "output/group2", "output/group1final", "output/group2final", "output/reduce1", "output/reduce2", "output/join").forEach(MapReduce::createDirectory);
+    }
+
     public static void runMapReduceTask(int executorId, Controller controller, int maxChunksPerExecutor) {
         ExecutorService mapExecutor = Executors.newFixedThreadPool(2, new NamedThreadFactory("MapExecutor-" + executorId + "-Thread-"));
 
         List<Future<?>> mapThreads = new ArrayList<>();
-        for (int i = 1; i <= maxChunksPerExecutor; i++) {
+        for (int i = 1; i <= 2; i++) {  // Change the loop limit to 2
+            System.out.println("Starting computer" + executorId + "-thread-" + i);
             MapNode node = new MapNode(i, "mapNode-" + executorId + "-" + i, controller, executorId, maxChunksPerExecutor);
+
+            // Instead of running the node directly, submit it to the executor
             Future<?> future = mapExecutor.submit(node);
             mapThreads.add(future);
         }
@@ -160,12 +232,37 @@ public class Main {
                 future.get();
             } catch (Exception e) {
                 e.printStackTrace();
-                System.out.println("this is showing");
+                System.out.println("An error occurred during map processing.");
             }
         }
 
         mapExecutor.shutdown();
-        System.out.println("Map Executor " + executorId + " finished. Starting groupNode.");
+        System.out.println("Map Executor " + executorId + " finished.");
+
+        // Create a new thread to execute when mapExecutor is finished
+        Thread groupNodeThread = new Thread(() -> {
+            boolean success = false;
+            int attempts = 0;
+            int MAX_RETRIES = 3;
+            while (!success && attempts < MAX_RETRIES) {  // Adjust MAX_RETRIES as needed
+                try {
+                    System.out.println("Starting groupNode attempt " + (attempts + 1)+ " for executor " + executorId);
+                    // Assuming the GroupNode class is implemented similarly to MapNode
+                    GroupNode groupNode = new GroupNode(controller, executorId);
+                    groupNode.run();  // or use the executor to submit the groupNode if it implements Runnable
+                    success = true;
+                    System.out.println("GroupNode finished successfully.");
+                } catch (Exception e) {
+                    System.err.println("Error in GroupNode attempt " + (attempts + 1) + " for executor " + executorId);
+                    attempts++;
+                }
+            }
+
+            if (!success) {
+                System.err.println("GroupNode failed after " + MAX_RETRIES + " attempts. Skipping.");
+            }
+        });
+        groupNodeThread.start();
     }
 
     public static void runComputers(int computerNumber) {
@@ -201,7 +298,18 @@ public class Main {
         }
     }
 
+    public static void generateChunks() {
+        int ChunkSize = 30 * 1024 * 1024;
+        try {
+            FileSplitter.splitAndLowercase("texts/bible.txt", "chunks", ChunkSize);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
     public static void main(String[] args) {
+//        generateChunks();
+        directoryUtils();
         runComputers(2);
     }
 }
