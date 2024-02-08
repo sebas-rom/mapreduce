@@ -155,6 +155,7 @@ def directory_utils(executor_id):
     os.makedirs(f"mapStep{executor_id}")
     os.makedirs(f"groupStep{executor_id}")
     os.makedirs(f"reduceStep{executor_id}")
+    os.makedirs(f"result", exist_ok=True)
 
 def run_map_reduce_task(executor_id, controller, max_chunks_per_executor):
     directory_utils(executor_id)
@@ -179,6 +180,21 @@ def run_map_reduce_task(executor_id, controller, max_chunks_per_executor):
         futureR = reduce_executor.submit(nodeR.run)
         concurrent.futures.wait([futureR])
 
+def reduce_final(path_1,path_2,final_path):
+    groupedResults = []
+    for filename in os.listdir(path_1):
+        new_path = os.path.join(path_1, filename)
+        loaded_map = read_result_from_file(new_path)
+        groupedResults.extend(loaded_map)
+    for filename in os.listdir(path_2):
+        new_path = os.path.join(path_2, filename)
+        loaded_map = read_result_from_file(new_path)
+        groupedResults.extend(loaded_map)
+    sorted_results = shuffle_and_sort(groupedResults)
+    reduced_results= reduce_function(sorted_results)
+    save_to_file(reduced_results, "reduced_final", final_path)
+    print("Exiting " + final_path)
+        
 def runComputers(computer_number):
     total_chunks = len([filename for filename in os.listdir('chunks') if filename.endswith(".txt")])
     controller = Controller(total_chunks)
@@ -187,14 +203,20 @@ def runComputers(computer_number):
         futures = [executor.submit(run_map_reduce_task, i, controller, controller.half_chunks) for i in range(1, computer_number + 1)]
     
     wait(futures)
+    reduce_final("reduceStep1","reduceStep2","result")
     print("Exiting Main Thread")
+    
+
+    
 if __name__ == "__main__":
 
-    input_file_path = "texts/bible.txt"
+    input_file_path = "texts/test.txt"
 
-    split_and_lowercase(input_file_path)
+    split_and_lowercase(input_file_path, 'chunks', 30 * 1024 * 1024)
 
     runComputers(2)
+    
+    
 
     
 
